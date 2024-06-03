@@ -216,7 +216,7 @@ int main(void){
 
     bmp_read(bmp, BMP, im_bmp);
 
-    output = fopen("/home/niko/Desktop/output.txt", "w");
+    output = fopen("/home/niko/Desktop/LeitorImagem/output.txt", "w");
 
     if(output != NULL){
 
@@ -232,12 +232,14 @@ int main(void){
 
    system("clear");
 
+/*
    for(int i=0; i<BMP.H; i++){
     for(int j=0; j<BMP.W; j++){
         printf("%c ", im_bmp[i*BMP.W + j]);
     }
     printf("\n");
    }
+*/
 
     }else{
 
