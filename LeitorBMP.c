@@ -18,7 +18,7 @@ typedef struct{
 
 FILE *bmpopen(char[64]);
 
-unsigned int bmp_header(FILE *, Imagem);
+unsigned int bmp_header(FILE *, Imagem *);
 
 Imagem DIB_header(FILE *);
 
@@ -27,6 +27,7 @@ void bmp_read(FILE *, Imagem, unsigned char *);
 unsigned char pixel_val(unsigned char *);
 
 int *ler_flags(int, char **);
+
 
 /*
 * ler_flags() le as flags em argv[] e cria um vetor com os valores 0 ou 1 para
@@ -115,7 +116,7 @@ FILE *bmpopen (char str[64])
     informacao que queremos do cabecalho.
 */
 
-unsigned int bmp_header (FILE *bmp, Imagem bemp)
+unsigned int bmp_header (FILE *bmp, Imagem *bemp)
 {
 
     char bm[3];
@@ -137,7 +138,8 @@ unsigned int bmp_header (FILE *bmp, Imagem bemp)
     fseek(bmp, 10, SEEK_SET);
     fread(&array_st, 4, 1, bmp);
 
-    bemp.tam_bytes = size;
+    //printf("Tamanho: %u\n", size);
+    (*bemp).tam_bytes = size;
 
     //printf("\n\n\nBM: %s\nTamanho do arquivo: %u  bytes\nPosicao do inicio da imagem: %u\n",bm, size, array_st);
 
@@ -296,20 +298,21 @@ int main (int argc, char *argv[])
         return 0;
     }
 
-    arr_st = bmp_header(bmp, BMP);
+    arr_st = bmp_header(bmp, &BMP);
 
     fseek(bmp, 14, SEEK_SET);
     fread(&offset, sizeof(int), 1, bmp);
-{
-    //arruma isso dps pra ele nao perder esses dados quando ler o DIB header
-    sh comp = BMP.compressao;
-    int tam = BMP.tam_bytes;
 
-    BMP = DIB_header(bmp);
+    {
+        //arruma isso dps pra ele nao perder esses dados quando ler o DIB header
+        sh comp = BMP.compressao;
+        unsigned int tam = BMP.tam_bytes;
 
-    BMP.compressao = comp;
-    BMP.tam_bytes = tam;
-}
+        BMP = DIB_header(bmp);
+
+        BMP.compressao = comp;
+        BMP.tam_bytes = tam;
+    }
 
     unsigned char *im_bmp = (unsigned char *) malloc(BMP.W*BMP.H*sizeof(char));
 
@@ -363,8 +366,8 @@ int main (int argc, char *argv[])
     if (flags[2] == 1)
     {
         printf("Tamanho (em pixels):\n%dx%d\n", BMP.W, BMP.H);
-        printf("Tamanho (em bytes):\n%d", BMP.tam_bytes);
-        printf("Bits por pixel:\n%hd\n", BMP.b_p_px);
+        printf("Tamanho (em bytes):\n%u\n", BMP.tam_bytes);
+        printf("Bits por pixel:\n%hu\n", BMP.b_p_px);
         printf("Compressao:\n");
         
         if(BMP.compressao == 0)
