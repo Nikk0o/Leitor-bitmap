@@ -4,19 +4,21 @@
 #include <unistd.h>
 
 
-
+typedef short int sh;
 typedef struct{
 
      int W; //largura da imagem em pixel.
      int H; //altura da imagem em pixel.
-     short int b_p_px; //bits_por_pixel.
+     unsigned int tam_bytes;
+     sh b_p_px; //bits_por_pixel.
+     sh compressao;
 
 } Imagem;
 
 
 FILE *bmpopen(char[64]);
 
-unsigned int bmp_header(FILE *);
+unsigned int bmp_header(FILE *, Imagem);
 
 Imagem DIB_header(FILE *);
 
@@ -24,7 +26,58 @@ void bmp_read(FILE *, Imagem, unsigned char *);
 
 unsigned char pixel_val(unsigned char *);
 
+int *ler_flags(int, char **);
 
+/*
+* ler_flags() le as flags em argv[] e cria um vetor com os valores 0 ou 1 para
+* cada uma das flags, caso tenha algumas.
+* Cada flag tem uma posição específica dentro desse vetor:
+* -h: 0
+* -e: 1
+* -d: 2
+* ...
+*/
+int *ler_flags(int n_arg, char *argv[])
+{
+    int *flags = (int *) calloc(3,sizeof(int));
+
+    if (flags == NULL)
+    {
+        abort();
+    }
+
+    for (int i=1; i < n_arg; i++)
+    {
+        if (argv[i][0] == '-')
+        {
+            switch (argv[i][1])
+            {
+                case 'h':
+                    //-h imprime uma tela com todas as flags possiveis e sintaxe do programa.
+                    printf("LeitorBMP <nome do arquivo/caminho> -flags ...\n\n\n-d          Imprime dados da imagem\n-e          Tira os espaços entre os pontos quando sao impressos na tela.\n-h          Imprime esse texto.\n");
+                    free(flags);
+                    flags = NULL;
+                    return flags;
+                    break;
+                case 'e':
+                    //-e coloca espaços entre os caracteres no output.
+                    flags[1] = 1;
+                    break;
+                case 'd':
+                    //-d imprime os dados da imagem.
+                    flags[2] = 1;
+                    break;
+                default:
+                    printf("LeitorBMP <nome do arquivo/caminho> -flags ...\n\n\n-d          Imprime dados da imagem\n-e          Tira os espaços entre os pontos quando sao impressos na tela.\n-h          Imprime esse texto.\n");
+                    free(flags);
+                    flags = NULL;
+                    return flags;
+                    break;
+            }
+        }
+    }
+    return flags;
+}
 /*
     O programa abre uma imagem bitmap e imprime ela no terminal usando apenas pontos e espaços.
     A saida possui as mesmas dimensoes da imagem original.
@@ -62,7 +115,7 @@ FILE *bmpopen (char str[64])
     informacao que queremos do cabecalho.
 */
 
-unsigned int bmp_header (FILE *bmp)
+unsigned int bmp_header (FILE *bmp, Imagem bemp)
 {
 
     char bm[3];
@@ -84,7 +137,9 @@ unsigned int bmp_header (FILE *bmp)
     fseek(bmp, 10, SEEK_SET);
     fread(&array_st, 4, 1, bmp);
 
-    printf("\n\n\nBM: %s\nTamanho do arquivo: %u  bytes\nPosicao do inicio da imagem: %u\n",bm, size, array_st);
+    bemp.tam_bytes = size;
+
+    //printf("\n\n\nBM: %s\nTamanho do arquivo: %u  bytes\nPosicao do inicio da imagem: %u\n",bm, size, array_st);
 
     return array_st;
 
@@ -120,11 +175,7 @@ Imagem DIB_header (FILE *bmp)
 
     fread(&compressao, 4, 1, bmp);
 
-    if(compressao == 0){
-        printf("Sem compressao (%d)\n", compressao);
-    }else{
-        printf("Compressao(%d)\n",compressao);
-    }
+    a.compressao = compressao;
 
     return a;
 }
@@ -151,7 +202,7 @@ void bmp_read (FILE *bmp, Imagem img, unsigned char *out)
 
     }
 
-    printf("Padding: %d\n", padding);
+    //printf("Padding: %d\n", padding);
 
     unsigned char pixel[3];
 
@@ -200,6 +251,7 @@ int main (int argc, char *argv[])
 {
 
     char *path = (char *) malloc(64*sizeof(char));
+    int *flags;
     Imagem BMP;
     unsigned int arr_st;
     int offset;
@@ -211,26 +263,29 @@ int main (int argc, char *argv[])
 
     path[strlen(path) - 1] = '\0';
 */
-    if (argc == 1)
+    flags = ler_flags(argc, argv);
+
+    if(flags == NULL)
     {
-        //imprime as flags possiveis
-        //acho bom colocar isso numa funcao
-        printf("LeitorBMP <nome do arquivo/caminho> -flags ...\n\n\n-e          Tira os espaços entre os pontos quando sao impressos na tela.\n-h          Imprime esse texto.\n");
         return 0;
     }
-    else if(argv[1][0] == '-')
+
+    int n_flags = 0;
+
+    for (int i=0; i < 3; i++)
     {
-        switch(argv[1][2])
+        if (flags[i] == 1)
         {
-            case 'h':
-                printf("LeitorBMP <nome do arquivo/caminho> -flags ...\n\n\n-e          Tira os espaços entre os pontos quando sao impressos na tela.\n-h          Imprime esse texto.\n");
-                return 0;
-                break;
-            default:
-                printf("LeitorBMP <nome do arquivo/caminho> -flags ...\n\n\n-e          Tira os espaços entre os pontos quando sao impressos na tela.\n-h          Imprime esse texto.\n");
-                return 0;
-                break;
+            n_flags++;
         }
+    }
+
+    if(n_flags == argc - 1)
+    {
+        printf("LeitorBMP <nome do arquivo/caminho> -flags ...\n\n\n-d          Imprime dados da imagem\n-e          Tira os espaços entre os pontos quando sao impressos na tela.\n-h          Imprime esse texto.\n");
+        free(flags);
+        free(path);
+        return 0;
     }
 
     FILE *bmp = bmpopen(argv[1]);
@@ -241,18 +296,20 @@ int main (int argc, char *argv[])
         return 0;
     }
 
-    arr_st = bmp_header(bmp);
+    arr_st = bmp_header(bmp, BMP);
 
     fseek(bmp, 14, SEEK_SET);
     fread(&offset, sizeof(int), 1, bmp);
-
-    printf("Tamanho do DIB header: %u\n", offset);
+{
+    //arruma isso dps pra ele nao perder esses dados quando ler o DIB header
+    sh comp = BMP.compressao;
+    int tam = BMP.tam_bytes;
 
     BMP = DIB_header(bmp);
 
-    printf("Imagem: %dx%d\nBits por pixel: %hd\n", BMP.W, BMP.H, BMP.b_p_px);
-
-    printf("Posicao atual do ponteiro no arquivo: %ld\n", ftell(bmp));
+    BMP.compressao = comp;
+    BMP.tam_bytes = tam;
+}
 
     unsigned char *im_bmp = (unsigned char *) malloc(BMP.W*BMP.H*sizeof(char));
 
@@ -270,7 +327,6 @@ int main (int argc, char *argv[])
 
     if (output != NULL)
     {
-
         fflush(output);
 
    for (int i=0; i<BMP.H; i++)
@@ -279,12 +335,9 @@ int main (int argc, char *argv[])
     {
         fputc((int) im_bmp[i*BMP.W + j], output);
 
-        if (argc > 2)
+        if (flags[1] == 1)
         {
-            if(!strcmp(argv[2], "-e"))
-            {
-                fputc((int) ' ',output);
-            }
+            fputc((int) ' ',output);
         }
     }
     fputc((int) '\n', output);
@@ -307,6 +360,25 @@ int main (int argc, char *argv[])
         printf("Nao foi possivel abrir o arquivo de saida.\n");
     }
 
+    if (flags[2] == 1)
+    {
+        printf("Tamanho (em pixels):\n%dx%d\n", BMP.W, BMP.H);
+        printf("Tamanho (em bytes):\n%d", BMP.tam_bytes);
+        printf("Bits por pixel:\n%hd\n", BMP.b_p_px);
+        printf("Compressao:\n");
+        
+        if(BMP.compressao == 0)
+        {
+            printf("Sem compressao\n");
+        }
+        else
+        {
+            printf("Compressao(mas nao sei qual)\n");
+        }
+        printf("\n");
+    }
+
+    free(flags);
     fclose(output);
     fclose(bmp);
     free(path);
