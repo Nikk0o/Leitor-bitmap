@@ -18,15 +18,15 @@ typedef struct{
 
 FILE *bmpopen(char[64]);
 
-unsigned int bmp_header(FILE *, Imagem *);
+unsigned int bmp_header(FILE *, Imagem *, int);
 
 Imagem DIB_header(FILE *);
 
-void bmp_read(FILE *, Imagem, unsigned char *);
+void bmp_read(FILE *, Imagem, unsigned char *, int);
 
 unsigned char pixel_val(unsigned char *);
 
-int *ler_flags(int, char **);
+int *ler_flags(FILE **, int, char **);
 
 
 /*
@@ -36,11 +36,15 @@ int *ler_flags(int, char **);
 * -h: 0
 * -e: 1
 * -d: 2
+* -s: 3
+* -o: 4
 * ...
 */
-int *ler_flags(int n_arg, char *argv[])
+int *ler_flags(FILE **output, int n_arg, char *argv[])
 {
-    int *flags = (int *) calloc(3,sizeof(int));
+    int *flags = (int *) calloc(5,sizeof(int));
+
+    int tres = 0;
 
     if (flags == NULL)
     {
@@ -55,7 +59,7 @@ int *ler_flags(int n_arg, char *argv[])
             {
                 case 'h':
                     //-h imprime uma tela com todas as flags possiveis e sintaxe do programa.
-                    printf("LeitorBMP <nome do arquivo/caminho> -flags ...\n\n\n-d          Imprime dados da imagem\n-e          Tira os espaços entre os pontos quando sao impressos na tela.\n-h          Imprime esse texto.\n");
+                    printf("LeitorBMP <nome do arquivo/caminho> -flags ...\n\n\n-d          Imprime dados da imagem\n-e          Tira os espaços entre os pontos quando sao impressos na tela.\n-h          Imprime esse texto.\n-o          Especifica um arquivo para escrever o ASCII\n");
                     free(flags);
                     flags = NULL;
                     return flags;
@@ -68,8 +72,26 @@ int *ler_flags(int n_arg, char *argv[])
                     //-d imprime os dados da imagem.
                     flags[2] = 1;
                     break;
+                case 's':
+                    //-s imprime se tudo ceu certo ou não
+                    flags[3] = 1;
+                    break;
+                case 'o':
+                    //-o indica qual é o arquivo onde será escrito o ascii.
+                    flags[4] = 1;
+                    if(++i == n_arg || argv[i][0] == '-')
+                    {
+                        tres = flags[3];
+                        *output = NULL;
+                        free(flags);
+                        flags = NULL;
+                        printf("LeitorBMP <nome do arquivo/caminho> -flags ...\n\n\n-d          Imprime dados da imagem\n-e          Tira os espaços entre os pontos quando sao impressos na tela.\n-h          Imprime esse texto.\n-o          Especifica um arquivo para escrever o ASCII\n");
+                        return flags; // tlavez muda o jeito q sai
+                    }
+                    *output = fopen(argv[i], "r+");
+                    break;
                 default:
-                    printf("LeitorBMP <nome do arquivo/caminho> -flags ...\n\n\n-d          Imprime dados da imagem\n-e          Tira os espaços entre os pontos quando sao impressos na tela.\n-h          Imprime esse texto.\n");
+                    printf("LeitorBMP <nome do arquivo/caminho> -flags ...\n\n\n-d          Imprime dados da imagem\n-e          Tira os espaços entre os pontos quando sao impressos na tela.\n-h          Imprime esse texto.\n-o          Especifica um arquivo para escrever o ASCII\n");
                     free(flags);
                     flags = NULL;
                     return flags;
@@ -77,6 +99,19 @@ int *ler_flags(int n_arg, char *argv[])
             }
         }
     }
+
+    tres = flags[3];
+
+    if (*output == NULL)
+    {
+        if (tres == 1)
+        {
+            printf("Nao foi possivel abrir o arquivo de saida\n");
+            printf("Abrindo output.txt como padrao\n");
+        }
+        return flags;
+    }
+
     return flags;
 }
 /*
@@ -116,7 +151,7 @@ FILE *bmpopen (char str[64])
     informacao que queremos do cabecalho.
 */
 
-unsigned int bmp_header (FILE *bmp, Imagem *bemp)
+unsigned int bmp_header (FILE *bmp, Imagem *bemp, int flag)
 {
 
     char bm[3];
@@ -127,7 +162,7 @@ unsigned int bmp_header (FILE *bmp, Imagem *bemp)
     bm[3] = '\0';
 
     if(bm[0] == 'B' && bm[1] == 'M'){
-        printf("O arquivo foi aberto corretamente\n");
+
     }else{
         printf("O arquivo nao foi aberto corretamente ou o cabecalho nao eh suportado.\n");
         exit(0);
@@ -182,11 +217,15 @@ Imagem DIB_header (FILE *bmp)
     return a;
 }
 
-void bmp_read (FILE *bmp, Imagem img, unsigned char *out)
+void bmp_read (FILE *bmp, Imagem img, unsigned char *out, int flag)
 {
 
     if(img.b_p_px != 24){
-        printf("O programa nao cosegue ler quando eh diferente de 24 bits por pixel atualmente.\nBits por pixel: %hd\n", img.b_p_px);
+        if(flag == 1)
+        {
+            printf("O programa nao cosegue ler quando eh diferente de 24 bits por pixel atualmente.\nBits por pixel: %hd\n", img.b_p_px);
+        }
+        
         exit(0);
     }
 
@@ -257,48 +296,63 @@ int main (int argc, char *argv[])
     Imagem BMP;
     unsigned int arr_st;
     int offset;
-    FILE *output;
+    FILE *output = NULL;
 
-/*    printf("Digite o nome do arquivo:\n");
+    flags = ler_flags(&output, argc, argv);
 
-    fgets(path, 64, stdin);
-
-    path[strlen(path) - 1] = '\0';
-*/
-    flags = ler_flags(argc, argv);
+    if (output == NULL)
+    {
+        output = fopen("output.txt","w");
+    }
 
     if(flags == NULL)
     {
         return 0;
     }
 
-    int n_flags = 0;
+    int n_flags = sizeof(flags);
 
-    for (int i=0; i < 3; i++)
+    //se o comando consistir apenas de flags, o programa termina
+    if(n_flags == argc - 1 && argc != 1)
     {
-        if (flags[i] == 1)
-        {
-            n_flags++;
-        }
-    }
-
-    if(n_flags == argc - 1)
-    {
-        printf("LeitorBMP <nome do arquivo/caminho> -flags ...\n\n\n-d          Imprime dados da imagem\n-e          Tira os espaços entre os pontos quando sao impressos na tela.\n-h          Imprime esse texto.\n");
+        printf("LeitorBMP <nome do arquivo/caminho> -flags ...\n\n\n-d          Imprime dados da imagem\n-e          Tira os espaços entre os pontos quando sao impressos na tela.\n-h          Imprime esse texto.\n-o          Especifica um arquivo para escrever o ASCII\n");
         free(flags);
         free(path);
         return 0;
     }
 
-    FILE *bmp = bmpopen(argv[1]);
+    if(argc == 1)
+    {
+        printf("Digite o nome do arquivo (se ele existir no diretorio do programa) ");
+        printf("ou o caminho completo dele:\n");
+
+        fgets(path, 64, stdin);
+
+        path[strlen(path) - 1] = '\0';
+    }
+    else
+    {
+        free(path);
+        path = argv[1];
+    }
+
+    FILE *bmp = bmpopen(path);
 
     if (bmp == NULL)
     {
-        printf("O path nao esta correto ou o arquivo nao existe\n(ou o negocio so n abriu msm)\n");
+        if(flags[3] == 1)
+        {
+            printf("O path nao esta correto ou o arquivo nao existe\n(ou o negocio so n abriu msm)\n");
+        }
         return 0;
     }
 
-    arr_st = bmp_header(bmp, &BMP);
+    arr_st = bmp_header(bmp, &BMP, flags[3]);
+
+    if(flags[3] == 1)
+    {
+        printf("O arquivo foi aberto corretamente\n");
+    }
 
     fseek(bmp, 14, SEEK_SET);
     fread(&offset, sizeof(int), 1, bmp);
@@ -324,13 +378,10 @@ int main (int argc, char *argv[])
 
     fseek(bmp, arr_st, SEEK_SET);
 
-    bmp_read(bmp, BMP, im_bmp);
-
-    output = fopen("output.txt", "w");
+    bmp_read(bmp, BMP, im_bmp, flags[3]);
 
     if (output != NULL)
     {
-        fflush(output);
 
    for (int i=0; i<BMP.H; i++)
    {
@@ -360,6 +411,7 @@ int main (int argc, char *argv[])
     }
     else
     {
+        if(flags[3] == 1)
         printf("Nao foi possivel abrir o arquivo de saida.\n");
     }
 
@@ -381,10 +433,18 @@ int main (int argc, char *argv[])
         printf("\n");
     }
 
-    free(flags);
+    if(n_flags > 0 )
+    {
+        free(flags);
+    }
     fclose(output);
     fclose(bmp);
-    free(path);
+
+    if(argc == 1)
+    {
+        free(path);
+    }
+
     free(im_bmp);
 
     return 0;
