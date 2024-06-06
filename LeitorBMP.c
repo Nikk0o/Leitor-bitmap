@@ -34,9 +34,22 @@ unsigned char pixel_val(unsigned char *);
     O programa ainda nao suporta compressao nem imagens que nao comecem com os caracteres "BM".
 */
 
-FILE *bmpopen(char str[64]){
+FILE *bmpopen (char str[64])
+{
 
     FILE *p = fopen(str,"r");
+
+    if (p == NULL)
+    {
+        for (int i=0; i<strlen(str); i++)
+        {
+            if (str[i] == '_')
+            {
+                str[i] = ' ';
+            }
+        }
+        p = fopen(str, "r");
+    }
 
     return p;
 
@@ -49,7 +62,8 @@ FILE *bmpopen(char str[64]){
     informacao que queremos do cabecalho.
 */
 
-unsigned int bmp_header(FILE *bmp){
+unsigned int bmp_header (FILE *bmp)
+{
 
     char bm[3];
     unsigned int size;
@@ -84,7 +98,8 @@ unsigned int bmp_header(FILE *bmp){
     foi lido corretamente.
 */
 
-Imagem DIB_header(FILE *bmp){
+Imagem DIB_header (FILE *bmp)
+{
 
     Imagem a;
     
@@ -114,7 +129,8 @@ Imagem DIB_header(FILE *bmp){
     return a;
 }
 
-void bmp_read(FILE *bmp, Imagem img, unsigned char *out){
+void bmp_read (FILE *bmp, Imagem img, unsigned char *out)
+{
 
     if(img.b_p_px != 24){
         printf("O programa nao cosegue ler quando eh diferente de 24 bits por pixel atualmente.\nBits por pixel: %hd\n", img.b_p_px);
@@ -151,18 +167,27 @@ void bmp_read(FILE *bmp, Imagem img, unsigned char *out){
 
 }
 
-unsigned char pixel_val(unsigned char *pixel){
+unsigned char pixel_val (unsigned char *pixel)
+{
 
     //Para imagens com apenas RGB, sem alfa nem nada.
 
     unsigned char val;
 
-    if(pixel[0] <= 64 && pixel[1] <= 64 && pixel[2] <= 64){
+    if(pixel[0] <= 32 && pixel[1] <= 32 && pixel[2] <= 32){
         val = (unsigned char) ' ';
+    }else if(pixel[0] <= 64 && pixel[1] <= 64 && pixel[2] <= 64){
+        val = (unsigned char) '.';
+    }else if(pixel[0] <= 96 && pixel[1] <= 96 && pixel[2] <= 96){
+        val = (unsigned char) '"';
     }else if(pixel[0] <= 128 && pixel[1] <= 128 && pixel[2] <= 128){
-        val = (unsigned char) '?';
+        val = (unsigned int) '/';
+    }else if(pixel[0] <= 160 && pixel[1] <= 160 && pixel[2] <= 160){
+        val = (unsigned int) 'O';
     }else if(pixel[0] <= 192 && pixel[1] <= 192 && pixel[2] <= 192){
-        val = (unsigned char) 'P';
+        val = (unsigned int) '0';
+    }else if(pixel[0] <= 224 && pixel[1] <= 224 && pixel[2] <= 224){
+        val = (unsigned int) '@';
     }else{
         val = (unsigned int) '#';
     }
@@ -171,7 +196,8 @@ unsigned char pixel_val(unsigned char *pixel){
 }
 
 
-int main(void){
+int main (int argc, char *argv[])
+{
 
     char *path = (char *) malloc(64*sizeof(char));
     Imagem BMP;
@@ -179,15 +205,16 @@ int main(void){
     int offset;
     FILE *output;
 
-    printf("Digite o caminho COMPLETO do arquivo:\n");
+/*    printf("Digite o nome do arquivo:\n");
 
     fgets(path, 64, stdin);
 
     path[strlen(path) - 1] = '\0';
+*/
+    FILE *bmp = bmpopen(argv[1]);
 
-    FILE *bmp = bmpopen(path);
-
-    if(bmp == NULL){
+    if (bmp == NULL)
+    {
         printf("O path nao esta correto ou o arquivo nao existe\n(ou o negocio so n abriu msm)\n");
         return 0;
     }
@@ -207,7 +234,8 @@ int main(void){
 
     unsigned char *im_bmp = (unsigned char *) malloc(BMP.W*BMP.H*sizeof(char));
 
-    if(im_bmp == NULL){
+    if (im_bmp == NULL)
+    {
         printf("Sem memoria\n");
         abort();
     }
@@ -216,21 +244,24 @@ int main(void){
 
     bmp_read(bmp, BMP, im_bmp);
 
-    output = fopen("/home/niko/Desktop/LeitorImagem/output.txt", "w");
+    output = fopen("output.txt", "w");
 
-    if(output != NULL){
+    if (output != NULL)
+    {
 
         fflush(output);
 
-   for(int i=0; i<BMP.H; i++){
-    for(int j=0; j<BMP.W; j++){
+   for (int i=0; i<BMP.H; i++)
+   {
+    for (int j=0; j<BMP.W; j++)
+    {
         fputc((int) im_bmp[i*BMP.W + j], output);
         fputc((int) ' ',output);
     }
     fputc((int) '\n', output);
    }
 
-   system("clear");
+   //system("clear");
 
 /*
    for(int i=0; i<BMP.H; i++){
@@ -241,10 +272,10 @@ int main(void){
    }
 */
 
-    }else{
-
+    }
+    else
+    {
         printf("Nao foi possivel abrir o arquivo de saida.\n");
-
     }
 
     fclose(output);
@@ -252,6 +283,6 @@ int main(void){
     free(path);
     free(im_bmp);
 
-    
     return 0;
+
 }
