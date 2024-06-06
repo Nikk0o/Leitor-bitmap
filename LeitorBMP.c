@@ -211,6 +211,28 @@ int main (int argc, char *argv[])
 
     path[strlen(path) - 1] = '\0';
 */
+    if (argc == 1)
+    {
+        //imprime as flags possiveis
+        //acho bom colocar isso numa funcao
+        printf("LeitorBMP <nome do arquivo/caminho> -flags ...\n\n\n-e          Tira os espaços entre os pontos quando sao impressos na tela.\n-h          Imprime esse texto.\n");
+        return 0;
+    }
+    else if(argv[1][0] == '-')
+    {
+        switch(argv[1][2])
+        {
+            case 'h':
+                printf("LeitorBMP <nome do arquivo/caminho> -flags ...\n\n\n-e          Tira os espaços entre os pontos quando sao impressos na tela.\n-h          Imprime esse texto.\n");
+                return 0;
+                break;
+            default:
+                printf("LeitorBMP <nome do arquivo/caminho> -flags ...\n\n\n-e          Tira os espaços entre os pontos quando sao impressos na tela.\n-h          Imprime esse texto.\n");
+                return 0;
+                break;
+        }
+    }
+
     FILE *bmp = bmpopen(argv[1]);
 
     if (bmp == NULL)
@@ -256,7 +278,14 @@ int main (int argc, char *argv[])
     for (int j=0; j<BMP.W; j++)
     {
         fputc((int) im_bmp[i*BMP.W + j], output);
-        fputc((int) ' ',output);
+
+        if (argc > 2)
+        {
+            if(!strcmp(argv[2], "-e"))
+            {
+                fputc((int) ' ',output);
+            }
+        }
     }
     fputc((int) '\n', output);
    }
