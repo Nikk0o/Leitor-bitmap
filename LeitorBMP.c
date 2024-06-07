@@ -173,10 +173,7 @@ unsigned int bmp_header (FILE *bmp, Imagem *bemp, int flag)
     fseek(bmp, 10, SEEK_SET);
     fread(&array_st, 4, 1, bmp);
 
-    //printf("Tamanho: %u\n", size);
     (*bemp).tam_bytes = size;
-
-    //printf("\n\n\nBM: %s\nTamanho do arquivo: %u  bytes\nPosicao do inicio da imagem: %u\n",bm, size, array_st);
 
     return array_st;
 
@@ -383,8 +380,8 @@ int main (int argc, char *argv[])
     if (output != NULL)
     {
 
-   for (int i=0; i<BMP.H; i++)
-   {
+    for (int i=0; i<BMP.H; i++)
+    {
     for (int j=0; j<BMP.W; j++)
     {
         fputc((int) im_bmp[i*BMP.W + j], output);
@@ -395,19 +392,7 @@ int main (int argc, char *argv[])
         }
     }
     fputc((int) '\n', output);
-   }
-
-   //system("clear");
-
-/*
-   for(int i=0; i<BMP.H; i++){
-    for(int j=0; j<BMP.W; j++){
-        printf("%c ", im_bmp[i*BMP.W + j]);
     }
-    printf("\n");
-   }
-*/
-
     }
     else
     {
