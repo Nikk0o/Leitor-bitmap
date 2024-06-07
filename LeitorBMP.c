@@ -55,6 +55,15 @@ int *ler_flags(FILE **output, int n_arg, char *argv[])
     {
         if (argv[i][0] == '-')
         {
+
+            if(argv[i][2] != '\0')
+            {
+                printf("LeitorBMP <nome do arquivo/caminho> -flags ...\n\n\n-d          Imprime dados da imagem\n-e          Tira os espaços entre os pontos quando sao impressos na tela.\n-h          Imprime esse texto.\n-o          Especifica um arquivo para escrever o ASCII\n");
+                free(flags);
+                flags = NULL;
+                exit(0);
+            }
+
             switch (argv[i][1])
             {
                 case 'h':
